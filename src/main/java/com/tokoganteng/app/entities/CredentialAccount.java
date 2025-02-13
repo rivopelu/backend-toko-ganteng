@@ -7,6 +7,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+import java.util.UUID;
+
 @Data
 @Entity
 @Builder
@@ -26,5 +29,12 @@ public class CredentialAccount {
     @JoinColumn(name = "account_id")
     @ManyToOne
     private Account account;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.id == null) {
+            this.id = UUID.randomUUID().toString();
+        }
+    }
 
 }
