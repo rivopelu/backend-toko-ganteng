@@ -33,7 +33,6 @@ public class ResponseHelper {
                 .build();
     }
 
-
     public static BaseResponse createBaseResponse() {
         return BaseResponse.builder()
                 .build();
