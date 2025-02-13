@@ -7,6 +7,6 @@ import org.springframework.stereotype.Service;
 public class AuthServiceImpl implements AuthService {
     @Override
     public String ping() {
-        return "";
+        return "PONG";
     }
 }
