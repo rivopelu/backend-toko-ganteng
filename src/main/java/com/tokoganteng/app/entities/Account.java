@@ -51,7 +51,7 @@ public class Account extends BaseEntity implements UserDetails {
 
     @Override
     public String getUsername() {
-        return email;
+        return getEmail();
     }
 
 
