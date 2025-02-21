@@ -12,6 +12,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -27,8 +28,12 @@ import static com.tokoganteng.app.constants.AuthConstant.HEADER_X_WHO;
 @Service
 @RequiredArgsConstructor
 public class JwtServiceImpl implements JwtService {
+    @Value("${auth.secret}")
+    private String SECRET;
 
-    private final AuthConstant authConstant = new AuthConstant();
+    @Value("${auth.expiration_time}")
+    private   long EXPIRATION_TIME;
+
     private final AccountRepository accountRepository;
 
     public String extractUsername(String token) {
@@ -54,7 +59,7 @@ public class JwtServiceImpl implements JwtService {
     }
 
     public String generateToken(Map<String, Object> extractClaims, UserDetails userDetails) {
-        return Jwts.builder().setClaims(extractClaims).setSubject(userDetails.getUsername()).setExpiration(new Date(System.currentTimeMillis() + authConstant.getEXPIRATION_TIME())).signWith(getSignInKey(), SignatureAlgorithm.HS256).compact();
+        return Jwts.builder().setClaims(extractClaims).setSubject(userDetails.getUsername()).setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME)).signWith(getSignInKey(), SignatureAlgorithm.HS256).compact();
     }
 
 
@@ -65,7 +70,7 @@ public class JwtServiceImpl implements JwtService {
 
 
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(authConstant.getSECRET());
+        byte[] keyBytes = Decoders.BASE64.decode(SECRET);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 

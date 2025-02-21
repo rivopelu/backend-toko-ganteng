@@ -41,7 +41,7 @@ public class Account extends BaseEntity implements UserDetails {
     private AccountRoleEnum role;
 
     @Column(name = "sign_up_type")
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     private SignUpTypeEnum signUpType;
 
     @Override

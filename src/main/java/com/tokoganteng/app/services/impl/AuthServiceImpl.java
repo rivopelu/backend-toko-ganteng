@@ -14,6 +14,7 @@ import com.tokoganteng.app.services.JwtService;
 import com.tokoganteng.app.utils.EntityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -74,29 +75,24 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public ResponseSignIn signInUser(RequestSignIn req) {
-        Optional<Account> account = accountRepository.findAccountQuery(req.getEmail());
+        Optional<Account> account = accountRepository.findByEmailAndActiveIsTrue(req.getEmail());
         if (account.isEmpty()) {
             throw new BadRequestException("Sign in failed");
         }
-        try {
-            return buildSignIn(account.get(), req.getPassword());
-        } catch (Exception e) {
-            throw new SystemErrorException(e);
-        }
+        return buildSignIn(account.get(), req.getPassword());
     }
 
 
     private ResponseSignIn buildSignIn(Account account, String password) {
         Authentication authentication;
-        authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(account.getUsername(), password));
-        if (!authentication.isAuthenticated()) {
-            throw new BadRequestException("Sign in failed");
-        }
         try {
+            authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(account.getUsername(), password));
             SecurityContextHolder.getContext().setAuthentication(authentication);
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             String jwt = jwtService.generateToken(userDetails);
             return ResponseSignIn.builder().accessToken(jwt).build();
+        } catch (BadCredentialsException e) {
+            throw new BadRequestException("Sign in failed");
         } catch (Exception e) {
             throw new SystemErrorException(e);
         }

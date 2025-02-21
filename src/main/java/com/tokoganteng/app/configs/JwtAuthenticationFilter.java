@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,9 +26,9 @@ import java.io.IOException;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
-
-    private final JwtService jwtServiceImpl;
+    @Value("${auth.secret}")
+    private String SECRET;
+    private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
 
@@ -38,19 +39,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain)
             throws IOException {
         try {
-
             final String authHeader = request.getHeader("Authorization");
             final String jwt;
             final String userEmail;
+
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                filterChain.doFilter(request, response);
+                filterChain.doFilter(request, response); // OK jika tidak ada header otorisasi
                 return;
             }
+
             jwt = authHeader.substring(7);
-            userEmail = jwtServiceImpl.extractUsername(jwt);
+            userEmail = jwtService.extractUsername(jwt);
+
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-                if (jwtServiceImpl.isTokenValid(jwt, userDetails)) {
+
+                if (jwtService.isTokenValid(jwt, userDetails)) { // Perbaikan di sini
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities()
                     );
@@ -58,15 +62,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             new WebAuthenticationDetailsSource().buildDetails(request)
                     );
                     Claims claims = Jwts.parser()
-                            .setSigningKey(new AuthConstant().getSECRET())
+                            .setSigningKey(SECRET)
                             .parseClaimsJws(jwt)
                             .getBody();
                     String userId = claims.get(AuthConstant.HEADER_X_WHO, String.class);
                     request.setAttribute(AuthConstant.HEADER_X_WHO, userId);
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    filterChain.doFilter(request, response); // Dipindahkan ke dalam blok if isTokenValid
+                } else { // Jika token invalid
+                    createHttpUnAuthentication(response, "Invalid Token"); // Panggil method ini
                 }
+            } else if (userEmail == null) {
+                createHttpUnAuthentication(response, "Invalid Token");
+            } else {
+                filterChain.doFilter(request, response);
             }
-            filterChain.doFilter(request, response);
+
         } catch (Exception ex) {
             createHttpUnAuthentication(response, ex.getMessage());
         }
